@@ -1,14 +1,22 @@
 const Discord = require("discord.js");
 const client = new Discord.Client();
 
+let { readdirSync } = require('fs');
+
+client.config = require('./config.js');
+
+client.comandos = new Discord.Collection();
+
 const request = require('request');
 const cheerio = require('cheerio');
 
 const chalk = require('chalk');
 
-const config = require("./config.json");
+const sqlite3 = require('sqlite3').verbose();
 
-let prefix = config.prefix;
+const db = new sqlite3.Database("./fivem.sqlite");
+
+let prefix = client.config.prefix;
 
 let status = "ONLINE"
 let color = ""
@@ -17,6 +25,9 @@ client.on('ready', () => {
     console.log(`Estoy listo!`);
     setInterval(function () { checkStatus() }, 5000);
 
+    db.run("CREATE TABLE IF NOT EXISTS servers (idserver TEXT, idcanal TEXT)", function (err) {
+        if (err) return console.error(err.message)
+    })
 });
 
 client.on("guildCreate", guild => {
@@ -31,34 +42,6 @@ client.on('message', (message) => {
         client.guilds.cache.forEach(guild => {
             message.channel.send(`${guild.name} | ${guild.id}`)
         })
-    }
-
-    if (message.content.startsWith(prefix + 'server')) {
-        message.channel.send(client.guilds.cache.size)
-    }
-
-    if (message.content.startsWith(prefix + 'status')) {
-        const embedDatos = new Discord.MessageEmbed()
-            .setColor(color)
-            .setFooter("Bot developer: hostemy.com", client.user.avatarURL())
-            .setTimestamp()
-            .addField("STATUS", status)
-
-        message.channel.send({ embed: embedDatos });
-
-    }
-
-    if (message.content.startsWith(prefix + 'help')) {
-        const embedDatos = new Discord.MessageEmbed()
-            .setTitle("FiveM Status Client")
-            .setAuthor(message.author.username, client.user.avatarURL())
-            .setColor(0xFFA76D)
-            .setFooter("Bot developer: hostemy.com", client.user.avatarURL())
-            .setTimestamp()
-            .addField("xfstatus", "Returns the status of the FiveM client.", true)
-            .addField("Auto Check", "The client's status will also appear in the bot's activity.", true);
-
-        message.channel.send({ embed: embedDatos });
     }
 });
 
@@ -89,5 +72,46 @@ function checkStatus() {
 
 }
 
-client.login(config.token);
+for (const file of readdirSync('./comandos/')) {
+
+    //Esta condición evitara que los archivos que no son tengan la extención .js no sean listado:
+    if (file.endsWith(".js")) {
+
+        //Elimina los últimos tres caracteres nombre del archivo para
+        //deshacerse de la extensión .js y solo quedarnos con el nombre del comando:
+        let fileName = file.substring(0, file.length - 3);
+
+        //Define una nueva varible 'fileContents' de la exportación del comando 
+        //dentro de la carpeta comandos:
+        let fileContents = require(`./comandos/${file}`);
+
+        //Agrega el nombre del comando a la colección client.commands con un 
+        //valor de sus exportaciones respectivas.
+        client.comandos.set(fileName, fileContents);
+    }
+}
+
+for (const file of readdirSync('./eventos/')) {
+
+    //Esto condicion evitara que los archivos que no son archivos .js no coleccione:
+    if (file.endsWith(".js")) {
+
+        //Elimina los últimos tres caracteres nombre del archivo para
+        //deshacerse de la extensión .js y solo quedarnos con el nombre del evento:
+        let fileName = file.substring(0, file.length - 3);
+
+        //Define una nueva variable 'fileContents' de la exportación del evento dentro de la carpeta eventos:
+        let fileContents = require(`./eventos/${file}`);
+
+        // Cuando el evento se activa o es solicitada exportamos la función con 
+        // el nombre del evento vinculada y tambien el parametro client.
+        client.on(fileName, fileContents.bind(null, client));
+
+        // Elimina la memoria caché del archivo requerido para facilitar la recarga y no 
+        // tener más memoria de la necesaria.
+        delete require.cache[require.resolve(`./eventos/${file}`)];
+    }
+}
+
+client.login(client.config.token);
 
