@@ -21,7 +21,7 @@ let prefix = client.config.prefix;
 let status = "ONLINE"
 let color = ""
 
-client.on('ready', () => {
+client.on('ready', async () => {
     console.log(`Estoy listo!`);
     setInterval(function () { checkStatus() }, 5000);
 
@@ -30,9 +30,9 @@ client.on('ready', () => {
     })
 });
 
-client.on("guildCreate", guild => {
+/*client.on("guildCreate", guild => {
     console.log(`${chalk.red(guild.name)}`);
-})
+})*/
 
 client.on('message', (message) => {
     if (message.author.bot) return
@@ -69,8 +69,8 @@ function checkStatus() {
         });
 
     client.user.setActivity(`Status: ${status}`);
-
 }
+
 
 for (const file of readdirSync('./comandos/')) {
 
