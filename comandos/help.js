@@ -10,5 +10,5 @@ module.exports = (client, message, args) => {
         .addField("xfstatus", "Returns the status of the FiveM client.", true)
         .addField("Auto Check", "The client's status will also appear in the bot's activity.", true);
 
-    message.channel.send({ embed: embedDatos });
+    message.channel.send({embed: embedDatos});
 }

@@ -1,48 +1,53 @@
 const Discord = require("discord.js");
 const client = new Discord.Client();
+const request = require('request');
+const cheerio = require('cheerio');
+const sqlite3 = require('sqlite3').verbose();
+const db = new sqlite3.Database("./fivem.sqlite");
+require("discord-buttons")(client);
 
-let { readdirSync } = require('fs');
-
-client.config = require('./config.js');
+require('dotenv').config()
 
 client.comandos = new Discord.Collection();
 
-const request = require('request');
-const cheerio = require('cheerio');
-
-const chalk = require('chalk');
-
-const sqlite3 = require('sqlite3').verbose();
-
-const db = new sqlite3.Database("./fivem.sqlite");
-
-let prefix = client.config.prefix;
-
-let status = "ONLINE"
+let {readdirSync} = require('fs');
+let prefix = process.env.PREFIX;
+let activity = "CHECKING"
+let oldActivity = ""
 let color = ""
+let status = "online"
 
 client.on('ready', async () => {
-    console.log(`Estoy listo!`);
-    setInterval(function () { checkStatus() }, 5000);
+    setInterval(function () {
+        checkStatus()
+    }, 5000);
 
     db.run("CREATE TABLE IF NOT EXISTS servers (idserver TEXT, idcanal TEXT)", function (err) {
         if (err) return console.error(err.message)
     })
-});
 
-/*client.on("guildCreate", guild => {
-    console.log(`${chalk.red(guild.name)}`);
-})*/
+    db.run("CREATE TABLE IF NOT EXISTS comandos (idserver TEXT, cotenido TEXT)", function (err) {
+        if (err) return console.error(err.message)
+    })
+
+});
 
 client.on('message', (message) => {
     if (message.author.bot) return
-    //console.log(`${chalk.blue(message.guild.name)} - ${chalk.white(message.author.username)} - ${chalk.yellow(message.content)} `)
 
     if (message.content.startsWith(prefix + 'servers') && message.author.id == "308616751732490240") {
         client.guilds.cache.forEach(guild => {
             message.channel.send(`${guild.name} | ${guild.id}`)
         })
     }
+
+    if (message.content.startsWith(prefix)) {
+        db.run(`INSERT INTO comandos
+                VALUES ("${message.guild.id}", "${message.content}")`, function (err) {
+            if (err) return console.error(err.message)
+        })
+    }
+
 });
 
 function checkStatus() {
@@ -52,66 +57,45 @@ function checkStatus() {
                 var $ = cheerio.load(body)
 
                 if ($(".entry-title").text().trim() == "User reports indicate no current problems at FiveM") {
-                    status = "ONLINE"
+                    activity = "ONLINE"
                     color = "0x34F00A"
                 }
 
                 if ($(".entry-title").text().trim() == "User reports indicate possible problems at FiveM") {
-                    status = "POSSIBLE PROBLEMS"
+                    activity = "POSSIBLE PROBLEMS"
                     color = "0xF0CA0A"
                 }
 
                 if ($(".entry-title").text().trim() == "User reports indicate problems at Wave FiveM") {
-                    status = "DOWN"
+                    activity = "DOWN"
                     color = "0xD51010"
                 }
             }
         });
 
-    client.user.setActivity(`Status: ${status}`);
+    client.user.setActivity(`.help | ${activity}`);
 }
-
 
 for (const file of readdirSync('./comandos/')) {
-
-    //Esta condición evitara que los archivos que no son tengan la extención .js no sean listado:
     if (file.endsWith(".js")) {
-
-        //Elimina los últimos tres caracteres nombre del archivo para
-        //deshacerse de la extensión .js y solo quedarnos con el nombre del comando:
         let fileName = file.substring(0, file.length - 3);
-
-        //Define una nueva varible 'fileContents' de la exportación del comando 
-        //dentro de la carpeta comandos:
         let fileContents = require(`./comandos/${file}`);
-
-        //Agrega el nombre del comando a la colección client.commands con un 
-        //valor de sus exportaciones respectivas.
         client.comandos.set(fileName, fileContents);
+        console.log(fileName)
     }
 }
+
+console.log('-----')
 
 for (const file of readdirSync('./eventos/')) {
-
-    //Esto condicion evitara que los archivos que no son archivos .js no coleccione:
     if (file.endsWith(".js")) {
-
-        //Elimina los últimos tres caracteres nombre del archivo para
-        //deshacerse de la extensión .js y solo quedarnos con el nombre del evento:
         let fileName = file.substring(0, file.length - 3);
-
-        //Define una nueva variable 'fileContents' de la exportación del evento dentro de la carpeta eventos:
         let fileContents = require(`./eventos/${file}`);
-
-        // Cuando el evento se activa o es solicitada exportamos la función con 
-        // el nombre del evento vinculada y tambien el parametro client.
         client.on(fileName, fileContents.bind(null, client));
-
-        // Elimina la memoria caché del archivo requerido para facilitar la recarga y no 
-        // tener más memoria de la necesaria.
         delete require.cache[require.resolve(`./eventos/${file}`)];
+        console.log(fileName)
     }
 }
 
-client.login(client.config.token);
+client.login(process.env.TOKEN);
 
