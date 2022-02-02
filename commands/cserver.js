@@ -6,6 +6,7 @@ module.exports = {
   ownerOnly: true,
   description: "Returns the number of active servers",
   callback: ({ client, message }) => {
-    return client.guilds.cache.size;
+    var Guilds = client.guilds.cache.map((guild) => guild.id);
+    return Guilds.length;
   },
 };
