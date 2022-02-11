@@ -5,6 +5,7 @@ module.exports = {
   category: "Help",
   description: "Invite the bot",
   callback: ({ client, message }) => {
+    console.log("Call update blog");
     const embedDatos = new MessageEmbed()
       .setTitle("FiveM Status Client - Upgrade")
       .setURL("https://discord.gg/dC5G5b6YV8")

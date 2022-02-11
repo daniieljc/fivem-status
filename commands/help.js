@@ -5,6 +5,7 @@ module.exports = {
   category: "Help",
   description: "Help menu",
   callback: ({ client, message }) => {
+    console.log("Call help menu");
     const embedDatos = new MessageEmbed()
       .setTitle("FiveM Status Client")
       .setColor(0xffa76d)

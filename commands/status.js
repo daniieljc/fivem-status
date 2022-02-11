@@ -9,6 +9,7 @@ module.exports = {
   category: "Help",
   description: "Check the status of FiveM services",
   callback: async ({ client, message }) => {
+    console.log("Call status server");
     const response = await fetch("https://downdetector.com/status/fivem/");
     const body = await response.text();
     const $ = cheerio.load(body);

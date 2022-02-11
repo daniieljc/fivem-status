@@ -5,6 +5,7 @@ module.exports = {
   category: "Help",
   description: "Invite the bot",
   callback: ({ client, message }) => {
+    console.log("Call invite bot to discord");
     const embedDatos = new MessageEmbed()
       .setTitle("Invite the bot")
       .setURL(
